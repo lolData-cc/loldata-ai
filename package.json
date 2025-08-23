@@ -1,0 +1,28 @@
+{
+  "name": "loldata-ai",
+  "version": "1.0.0",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.56.0",
+    "dotenv": "^17.2.1",
+    "fastify": "^5.5.0",
+    "gray-matter": "^4.0.3",
+    "openai": "^4.58.0",
+    "pg": "^8.16.3",
+    "pino": "^9.9.0",
+    "zod": "^4.1.0"
+  },
+  "scripts": {
+    "dev": "bun run src/server.ts",
+    "start": "bun run src/server.ts",
+    "test:db": "bun run scripts/test-db.ts"
+  }
+}
