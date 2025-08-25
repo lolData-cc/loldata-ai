@@ -12,7 +12,7 @@ import { UiPayloadZ } from "./analysis-schema";
 import { scoreFromDeltas } from "./scoring";
 import { fetchMatch } from "./riot";
 import { ensureAnalysisOrRepair } from "./guard";
-
+import { getMatchupWinrate } from "./matchup-data";
 import { extractIntent } from "./chat-intent";
 import {
   mostCommonRoleForChampion,
@@ -170,6 +170,20 @@ app.post("/chat/ask", async (req, reply) => {
         )) ??
         "15";
 
+      let matchup: { n: number; winrate: number } | undefined = undefined;
+
+      if (intent.topic === "matchup" && intent.opponent) {
+        const m = await getMatchupWinrate({
+          champ: intent.champion,
+          opp: intent.opponent,
+          role,
+          queueId,
+          patch_major: patchMajor,
+          use_major: true
+        });
+        matchup = { n: m.n, winrate: +(m.winrate * 100).toFixed(1) }; // percent 0..100
+      }
+
       const { cohort, topItems } = await loadCohort(
         intent.champion,
         role as any,
@@ -183,25 +197,25 @@ app.post("/chat/ask", async (req, reply) => {
           question: prompt,
           topic: intent.topic,
           champion: intent.champion,
+          opponent: intent.opponent,
           role,
           queueId,
           patch_major: patchMajor,
-          cohort: {
-            n: cohort.n,
-            winrate: +(cohort.winrate * 100).toFixed(1),
-          },
-          top_items: topItems?.map((t) => ({
-            item: t.item_id,
-            freq: +(+t.freq * 100).toFixed(1),
-          })),
+          cohort: cohort ? { n: cohort.n, winrate: +(cohort.winrate * 100).toFixed(1) } : undefined,
+          top_items: topItems?.map((t) => ({ item: t.item_id, freq: +(+t.freq * 100).toFixed(1) })),
+          matchup,
+          // mechanics if you use them:
+          // mechanics,
+          reveal_stats: false   // 👈 IMPORTANT: hide stats in text
         };
 
         const answer = await askText(buildChatPrompt(pack), { retries: 1 });
         return reply.send({
-          mode: "cohort",
-          intent: { ...intent, role },
-          cohort: pack.cohort,
-          answer,
+          mode: cohort?.n ? "cohort" : "generic",
+          intent: { ...intent, role, patch_major: patchMajor },
+          cohort: cohort ? { n: cohort.n, winrate: +(cohort.winrate * 100).toFixed(1), topItems: pack.top_items } : null,
+          matchup,
+          answer
         });
       }
     }

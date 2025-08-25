@@ -7,30 +7,46 @@ export function buildChatPrompt(input: {
   role?: string|null;
   queueId?: number|null;
   patch_major?: string|null;
-  cohort?: { n:number; winrate:number; avg?: any };
+  cohort?: { n:number; winrate:number; avg?: any } | undefined;
   top_items?: Array<{ item:number; freq:number }>;
   top_runes?: Array<{ perk_id:number; freq:number }>;
   enemy_tags?: string[];
+  mechanics?: { rewards?: Record<string, number|null> } | null;
+  // NEW: control whether to reveal stats in text
+  reveal_stats?: boolean;
 }) {
   return `
-You are a League of Legends coach. Always answer IN ENGLISH.
+You are a League of Legends coach. Answer IN ENGLISH.
 
-STYLE RULES:
-- Stick to the QUESTION only. Do not add unrelated advice.
-- Be very concise: 3–5 bullet points maximum.
-- Each bullet = one short actionable tip (one line).
-- For counterpicks: 3–4 champions, each with a one-line reason.
-- For matchup guides: 3–5 tips max (short).
-- For builds/runes: 2–3 key items or runes, each with a quick "why".
-- Never expand ability names: say "Leona Q", not "Shield of Daybreak".
-- Do not write long paragraphs. Never exceed ~120 words total.
+STYLE RULES (STRICT):
+- Output ONLY 3–4 short bullets. No intro, no conclusion, no headings, no bold.
+- Stick exactly to the question.
+- Never spell out ability names (say "Leona Q", not full names).
+- Hard brevity: keep it under ~80 words total.
 
-If PACK has cohort data, you may mention it briefly (e.g. "Based on n=312, winrate 51.3%").
-If PACK is empty, fall back to general League knowledge.
+NUMBERS / STATS RULES:
+- Do NOT state any numeric values (winrate, n, %, gold, seconds) unless explicitly allowed.
+- reveal_stats=${!!input.reveal_stats}
+- If reveal_stats=false, NEVER mention cohort or matchup numbers even if present in PACK.
+- If MECHANICS.rewards has null for a value, do NOT invent a number.
 
-Return plain text (no JSON).
+Return plain text ONLY (bullets).
 
 PACK:
-${JSON.stringify(input)}
+${JSON.stringify({
+  question: input.question,
+  topic: input.topic,
+  champion: input.champion,
+  opponent: input.opponent,
+  role: input.role,
+  queueId: input.queueId,
+  patch_major: input.patch_major,
+  top_items: input.top_items,
+  top_runes: input.top_runes,
+  enemy_tags: input.enemy_tags
+})}
+
+MECHANICS:
+${JSON.stringify(input.mechanics || { rewards: {} })}
 `;
 }
